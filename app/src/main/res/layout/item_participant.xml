@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:minHeight="52dp"
+    android:orientation="horizontal">
+
+    <CheckBox
+        android:id="@+id/checkbox"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textAppearance="?attr/textAppearanceBodyLarge"
+        android:textColor="@color/text_primary" />
+
+    <EditText
+        android:id="@+id/shareInput"
+        android:layout_width="96dp"
+        android:layout_height="wrap_content"
+        android:gravity="end"
+        android:importantForAutofill="no"
+        android:inputType="numberDecimal"
+        android:textAppearance="?attr/textAppearanceBodyLarge"
+        android:textColor="@color/text_primary"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/shareText"
+        android:layout_width="84dp"
+        android:layout_height="wrap_content"
+        android:fontFeatureSettings="tnum"
+        android:gravity="end"
+        android:textAppearance="?attr/textAppearanceTitleSmall"
+        android:textColor="@color/text_primary" />
+</LinearLayout>

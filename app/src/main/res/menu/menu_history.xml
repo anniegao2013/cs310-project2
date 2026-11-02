@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_record_settlement"
+        android:title="@string/record_settlement"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_balances"
+        android:title="@string/balances"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_monthly_summary"
+        android:title="@string/monthly_summary"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_members"
+        android:title="@string/members"
+        app:showAsAction="never" />
+</menu>

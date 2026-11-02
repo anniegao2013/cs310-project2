@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="cardinal">#990000</color>
+    <color name="cardinal_dark">#6E0000</color>
+    <color name="gold">#FFCC00</color>
+    <color name="white">#FFFFFF</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="background">#FFFFFF</color>
+    <color name="text_primary">#1E1416</color>
+    <color name="text_secondary">#5C5053</color>
+    <color name="outline">#7A6D70</color>
+    <color name="owed_to_you">#0B6B3A</color>
+    <color name="you_owe">#990000</color>
+    <color name="settlement">#2B4C8C</color>
+    <color name="divider">#E8E0E1</color>
+    <color name="tint_neutral">#F3EEEE</color>
+</resources>

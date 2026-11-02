@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.SplitSmart" parent="Theme.Material3.Light">
+        <item name="colorPrimary">@color/cardinal</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimaryContainer">@color/tint_neutral</item>
+        <item name="colorOnPrimaryContainer">@color/cardinal_dark</item>
+        <item name="colorSecondary">@color/gold</item>
+        <item name="colorOnSecondary">@color/text_primary</item>
+        <item name="colorSecondaryContainer">@color/gold</item>
+        <item name="colorOnSecondaryContainer">@color/text_primary</item>
+        <item name="colorError">@color/you_owe</item>
+        <item name="colorOnBackground">@color/text_primary</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+        <item name="colorOutline">@color/outline</item>
+        <item name="colorOutlineVariant">@color/divider</item>
+        <item name="android:colorBackground">@color/background</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorSurfaceContainerLowest">@color/surface</item>
+        <item name="colorSurfaceContainerLow">@color/surface</item>
+        <item name="colorSurfaceContainer">@color/surface</item>
+        <item name="colorSurfaceContainerHigh">@color/surface</item>
+        <item name="colorSurfaceContainerHighest">@color/surface</item>
+        <item name="elevationOverlayEnabled">false</item>
+        <item name="android:statusBarColor">@color/cardinal</item>
+        <item name="actionBarTheme">@style/ThemeOverlay.SplitSmart.ActionBar</item>
+        <item name="actionBarStyle">@style/Widget.SplitSmart.ActionBar</item>
+        <item name="actionBarPopupTheme">@style/ThemeOverlay.SplitSmart.Popup</item>
+
+        <!-- Set the default font through textViewStyle: a theme-level fontFamily would override every text appearance. -->
+        <item name="android:textViewStyle">@style/Widget.SplitSmart.TextView</item>
+        <item name="textAppearanceHeadlineLarge">@style/TextAppearance.SplitSmart.Wordmark</item>
+        <item name="textAppearanceHeadlineSmall">@style/TextAppearance.SplitSmart.HeadlineSmall</item>
+        <item name="textAppearanceTitleLarge">@style/TextAppearance.SplitSmart.TitleLarge</item>
+        <item name="textAppearanceTitleMedium">@style/TextAppearance.SplitSmart.TitleMedium</item>
+        <item name="textAppearanceTitleSmall">@style/TextAppearance.SplitSmart.TitleSmall</item>
+        <item name="textAppearanceBodyLarge">@style/TextAppearance.SplitSmart.BodyLarge</item>
+        <item name="textAppearanceBodyMedium">@style/TextAppearance.SplitSmart.BodyMedium</item>
+        <item name="textAppearanceBodySmall">@style/TextAppearance.SplitSmart.BodySmall</item>
+        <item name="textAppearanceLabelLarge">@style/TextAppearance.SplitSmart.LabelLarge</item>
+
+        <item name="materialButtonStyle">@style/Widget.SplitSmart.Button</item>
+        <item name="materialButtonOutlinedStyle">@style/Widget.SplitSmart.Button.Outlined</item>
+        <item name="extendedFloatingActionButtonStyle">@style/Widget.SplitSmart.Fab</item>
+    </style>
+
+    <!-- Don't set a background here: AppCompat inflates the whole screen frame with this overlay. -->
+    <style name="ThemeOverlay.SplitSmart.ActionBar" parent="ThemeOverlay.Material3.Dark.ActionBar" />
+
+    <style name="ThemeOverlay.SplitSmart.Popup" parent="ThemeOverlay.Material3.Light">
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorSurfaceContainerLow">@color/surface</item>
+        <item name="colorSurfaceContainer">@color/surface</item>
+        <item name="colorSurfaceContainerHigh">@color/surface</item>
+        <item name="elevationOverlayEnabled">false</item>
+    </style>
+
+    <style name="Widget.SplitSmart.ActionBar" parent="Widget.Material3.ActionBar.Solid">
+        <item name="background">@color/cardinal</item>
+        <item name="elevation">0dp</item>
+        <item name="titleTextStyle">@style/TextAppearance.SplitSmart.ActionBarTitle</item>
+        <item name="subtitleTextStyle">@style/TextAppearance.SplitSmart.ActionBarSubtitle</item>
+    </style>
+
+    <!-- Type: Barlow throughout, with Barlow Condensed for the wordmark and balance numbers. -->
+    <style name="TextAppearance.SplitSmart.ActionBarTitle" parent="TextAppearance.Material3.ActionBar.Title">
+        <item name="android:textColor">@color/white</item>
+        <item name="android:fontFamily">@font/barlow_semibold</item>
+        <item name="fontFamily">@font/barlow_semibold</item>
+        <item name="android:textSize">21sp</item>
+    </style>
+
+    <style name="TextAppearance.SplitSmart.ActionBarSubtitle" parent="TextAppearance.Material3.ActionBar.Subtitle">
+        <item name="android:textColor">@color/white</item>
+        <item name="android:fontFamily">@font/barlow_regular</item>
+        <item name="fontFamily">@font/barlow_regular</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="TextAppearance.SplitSmart.Wordmark" parent="TextAppearance.Material3.HeadlineLarge">
+        <item name="android:fontFamily">@font/barlow_condensed_semibold</item>
+        <item name="fontFamily">@font/barlow_condensed_semibold</item>
+        <item name="android:textSize">44sp</item>
+        <item name="android:letterSpacing">0</item>
+    </style>
+
+    <style name="TextAppearance.SplitSmart.HeadlineSmall" parent="TextAppearance.Material3.HeadlineSmall">
+        <item name="android:fontFamily">@font/barlow_semibold</item>
+        <item name="fontFamily">@font/barlow_semibold</item>
+        <item name="android:textSize">24sp</item>
+    </style>
+
+    <style name="TextAppearance.SplitSmart.TitleLarge" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:fontFamily">@font/barlow_semibold</item>
+        <item name="fontFamily">@font/barlow_semibold</item>
+        <item name="android:textSize">22sp</item>
+    </style>
+
+    <style name="TextAppearance.SplitSmart.TitleMedium" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:fontFamily">@font/barlow_semibold</item>
+        <item name="fontFamily">@font/barlow_semibold</item>
+        <item name="android:textSize">17sp</item>
+        <item name="android:letterSpacing">0</item>
+    </style>
+
+    <style name="TextAppearance.SplitSmart.TitleSmall" parent="TextAppearance.Material3.TitleSmall">
+        <item name="android:fontFamily">@font/barlow_semibold</item>
+        <item name="fontFamily">@font/barlow_semibold</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:letterSpacing">0</item>
+    </style>
+
+    <style name="TextAppearance.SplitSmart.BodyLarge" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:fontFamily">@font/barlow_regular</item>
+        <item name="fontFamily">@font/barlow_regular</item>
+        <item name="android:textSize">17sp</item>
+        <item name="android:letterSpacing">0</item>
+    </style>
+
+    <style name="TextAppearance.SplitSmart.BodyMedium" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:fontFamily">@font/barlow_regular</item>
+        <item name="fontFamily">@font/barlow_regular</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:letterSpacing">0</item>
+    </style>
+
+    <style name="TextAppearance.SplitSmart.BodySmall" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:fontFamily">@font/barlow_regular</item>
+        <item name="fontFamily">@font/barlow_regular</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:letterSpacing">0</item>
+    </style>
+
+    <style name="TextAppearance.SplitSmart.LabelLarge" parent="TextAppearance.Material3.LabelLarge">
+        <item name="android:fontFamily">@font/barlow_semibold</item>
+        <item name="fontFamily">@font/barlow_semibold</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:letterSpacing">0</item>
+    </style>
+
+    <style name="Widget.SplitSmart.TextView" parent="Widget.AppCompat.TextView">
+        <item name="android:textAppearance">@style/TextAppearance.SplitSmart.BodyMedium</item>
+    </style>
+
+    <!-- Controls -->
+    <style name="ShapeAppearance.SplitSmart.Control" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">8dp</item>
+    </style>
+
+    <style name="Widget.SplitSmart.Button" parent="Widget.Material3.Button">
+        <item name="backgroundTint">@color/button_background</item>
+        <item name="android:textColor">@color/button_text</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.SplitSmart.Control</item>
+    </style>
+
+    <style name="Widget.SplitSmart.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="shapeAppearance">@style/ShapeAppearance.SplitSmart.Control</item>
+    </style>
+
+    <style name="Widget.SplitSmart.Fab" parent="Widget.Material3.ExtendedFloatingActionButton.Icon.Primary">
+        <item name="backgroundTint">@color/gold</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="iconTint">@color/text_primary</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.SplitSmart.Control</item>
+    </style>
+
+    <style name="SpinnerField" parent="Widget.AppCompat.Spinner">
+        <item name="android:background">@drawable/spinner_field</item>
+        <item name="android:popupBackground">@color/surface</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">36dp</item>
+    </style>
+
+    <!-- Layout pieces -->
+    <style name="SectionLabel">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textAppearance">?attr/textAppearanceTitleSmall</item>
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:layout_marginTop">16dp</item>
+        <item name="android:layout_marginBottom">6dp</item>
+    </style>
+
+    <style name="BandLabel">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textAppearance">?attr/textAppearanceBodyMedium</item>
+        <item name="android:textColor">@color/white</item>
+    </style>
+
+    <style name="BandAmount">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">50dp</item>
+        <item name="android:layout_marginTop">2dp</item>
+        <item name="android:fontFamily">@font/barlow_condensed_semibold</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:autoSizeTextType">uniform</item>
+        <item name="android:autoSizeMinTextSize">20sp</item>
+        <item name="android:autoSizeMaxTextSize">42sp</item>
+        <item name="android:autoSizeStepGranularity">1sp</item>
+    </style>
+
+    <style name="BandDivider">
+        <item name="android:layout_width">2dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_marginHorizontal">16dp</item>
+        <item name="android:background">@color/gold</item>
+    </style>
+
+    <style name="RowDivider">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">1dp</item>
+        <item name="android:background">@color/divider</item>
+    </style>
+</resources>
