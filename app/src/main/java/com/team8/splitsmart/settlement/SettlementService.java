@@ -13,8 +13,8 @@ import com.team8.splitsmart.expense.AmountValidator;
 import java.time.LocalDate;
 
 /**
- * Records payments made outside the app. The user who owes money records that they paid another
- * member; the amount can never exceed what they currently owe that member.
+ * Records payments made outside the app. Either side of the payment can record it: the member who
+ * paid or the member who received it. The amount can never exceed what the payer currently owes.
  */
 public class SettlementService {
     private final SettlementRepository settlementRepo;
@@ -30,24 +30,28 @@ public class SettlementService {
         this.balanceService = balanceService;
     }
 
-    public Settlement recordSettlement(long groupId, User payer, long payeeId, String amountText, String note) {
-        if (payeeId == payer.userId) {
-            throw new ValidationException("Choose another member to pay");
+    public Settlement recordSettlement(long groupId, User creator, long payerId, long payeeId,
+                                       String amountText, String note) {
+        if (payeeId == payerId) {
+            throw new ValidationException("Choose another member");
         }
-        if (!groupRepo.isMember(groupId, payer.userId) || !groupRepo.isMember(groupId, payeeId)) {
+        if (creator.userId != payerId && creator.userId != payeeId) {
+            throw new ValidationException("Only the payer or the recipient can record a settlement");
+        }
+        if (!groupRepo.isMember(groupId, payerId) || !groupRepo.isMember(groupId, payeeId)) {
             throw new ValidationException("Both users must be members of the group");
         }
         int cents = amountValidator.parseCents(amountText);
-        checkWithinOwed(cents, currentDebt(groupId, payer.userId, payeeId));
+        checkWithinOwed(cents, currentDebt(groupId, payerId, payeeId));
 
         Settlement settlement = new Settlement();
         settlement.groupId = groupId;
-        settlement.payerId = payer.userId;
+        settlement.payerId = payerId;
         settlement.payeeId = payeeId;
         settlement.amountCents = cents;
         settlement.date = LocalDate.now();
         settlement.note = blankToNull(note);
-        settlement.createdBy = payer.userId;
+        settlement.createdBy = creator.userId;
         return settlementRepo.save(settlement);
     }
 
@@ -95,10 +99,10 @@ public class SettlementService {
 
     private static void checkWithinOwed(int cents, int owedCents) {
         if (owedCents <= 0) {
-            throw new ValidationException("You don't owe this member anything");
+            throw new ValidationException("Nothing is owed between these members");
         }
         if (cents > owedCents) {
-            throw new ValidationException("Amount cannot be more than the " + Money.format(owedCents) + " you owe");
+            throw new ValidationException("Amount cannot be more than the " + Money.format(owedCents) + " owed");
         }
     }
 

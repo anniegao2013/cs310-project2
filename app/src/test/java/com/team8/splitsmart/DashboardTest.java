@@ -108,10 +108,17 @@ public class DashboardTest {
     }
 
     @Test
-    public void keywordSearchesTitlesAndNotes() {
-        List<TransactionItem> found = history.search(items(), "grocer");
-        assertEquals(2, found.size()); // the expense title and the settlement note
-        assertEquals(1, history.search(items(), "OCTOBER").size());
+    public void keywordSearchesTitlesAndNotesCaseSensitively() {
+        List<TransactionItem> title = history.search(items(), "Grocer");
+        assertEquals(1, title.size());
+        assertEquals("Groceries", title.get(0).title);
+
+        List<TransactionItem> settlementNote = history.search(items(), "grocer");
+        assertEquals(1, settlementNote.size());
+        assertEquals(TransactionType.SETTLEMENT, settlementNote.get(0).type);
+
+        assertEquals(1, history.search(items(), "October").size());
+        assertEquals(0, history.search(items(), "OCTOBER").size());
     }
 
     @Test

@@ -49,7 +49,7 @@
     <string name="edit">Edit</string>
     <string name="close">Close</string>
     <string name="amount">Amount</string>
-    <string name="pay_to">You paid</string>
+    <string name="payment">Payment</string>
     <string name="email">Email</string>
     <string name="balances_explainer">Each balance combines every expense and settlement between you and that member. Debts between other members are never merged into yours.</string>
 </resources>
