@@ -10,10 +10,10 @@
     <TextView
         style="@style/SectionLabel"
         android:layout_marginTop="0dp"
-        android:text="@string/pay_to" />
+        android:text="@string/payment" />
 
     <Spinner
-        android:id="@+id/payeeSpinner"
+        android:id="@+id/paymentSpinner"
         style="@style/SpinnerField"
         android:layout_width="match_parent"
         android:layout_height="48dp" />

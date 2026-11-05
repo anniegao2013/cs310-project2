@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 /** Builds the combined expense and settlement history of a group; searches and filters it. */
@@ -46,17 +45,17 @@ public class HistoryService {
         return items;
     }
 
-    /** Keyword search over expense titles and transaction notes, case-insensitive. */
+    /** Keyword search over expense titles and transaction notes, case-sensitive. */
     public List<TransactionItem> search(List<TransactionItem> items, String query) {
         if (query == null || query.trim().isEmpty()) {
             return new ArrayList<>(items);
         }
-        String needle = query.trim().toLowerCase(Locale.US);
+        String needle = query.trim();
         List<TransactionItem> result = new ArrayList<>();
         for (TransactionItem item : items) {
             boolean inTitle = item.type == TransactionType.EXPENSE
-                    && item.title != null && item.title.toLowerCase(Locale.US).contains(needle);
-            boolean inNote = item.note != null && item.note.toLowerCase(Locale.US).contains(needle);
+                    && item.title != null && item.title.contains(needle);
+            boolean inNote = item.note != null && item.note.contains(needle);
             if (inTitle || inNote) {
                 result.add(item);
             }

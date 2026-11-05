@@ -388,29 +388,29 @@ public class HistoryActivity extends AppCompatActivity {
 
     public void onRecordSettlementClicked() {
         UiAsync.run(this, () -> balanceService.getBalances(groupId, user.userId), balances -> {
-            List<PairBalance> owed = new ArrayList<>();
+            List<PairBalance> open = new ArrayList<>();
             for (PairBalance pair : balances.pairs) {
-                if (pair.netCents < 0) {
-                    owed.add(pair);
+                if (pair.netCents != 0) {
+                    open.add(pair);
                 }
             }
-            if (owed.isEmpty()) {
+            if (open.isEmpty()) {
                 new MaterialAlertDialogBuilder(this)
                         .setTitle(R.string.record_settlement)
-                        .setMessage("You don't owe anyone in this group right now. A settlement records a payment "
-                                + "you made to someone you owe.")
+                        .setMessage("You have no open balances in this group right now. A settlement records a "
+                                + "payment between you and a member you owe or who owes you.")
                         .setPositiveButton(R.string.close, null)
                         .show();
             } else {
-                showSettlementDialog(owed, null);
+                showSettlementDialog(open, null);
             }
         });
     }
 
-    /** Record a new settlement (choose from {@code owed}) or edit {@code existing}. */
-    private void showSettlementDialog(List<PairBalance> owed, TransactionItem existing) {
+    /** Record a new settlement (choose from the {@code open} balances, either direction) or edit {@code existing}. */
+    private void showSettlementDialog(List<PairBalance> open, TransactionItem existing) {
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_settlement, null);
-        Spinner payeeSpinner = view.findViewById(R.id.payeeSpinner);
+        Spinner paymentSpinner = view.findViewById(R.id.paymentSpinner);
         TextInputLayout amountLayout = view.findViewById(R.id.amountLayout);
         TextInputEditText amountInput = view.findViewById(R.id.amountInput);
         TextInputEditText noteInput = view.findViewById(R.id.noteInput);
@@ -418,19 +418,21 @@ public class HistoryActivity extends AppCompatActivity {
 
         if (existing == null) {
             List<String> labels = new ArrayList<>();
-            for (PairBalance pair : owed) {
-                labels.add(pair.otherUserName + " (you owe " + Money.format(-pair.netCents) + ")");
+            for (PairBalance pair : open) {
+                labels.add(pair.netCents < 0
+                        ? "You paid " + pair.otherUserName + " (you owe " + Money.format(-pair.netCents) + ")"
+                        : pair.otherUserName + " paid you (owes you " + Money.format(pair.netCents) + ")");
             }
-            payeeSpinner.setAdapter(spinnerAdapter(labels.toArray(new String[0])));
-            onSelected(payeeSpinner, position -> {
-                int owedCents = -owed.get(position).netCents;
+            paymentSpinner.setAdapter(spinnerAdapter(labels.toArray(new String[0])));
+            onSelected(paymentSpinner, position -> {
+                int owedCents = Math.abs(open.get(position).netCents);
                 amountInput.setText(Money.toInput(owedCents));
                 amountLayout.setHelperText("At most " + Money.format(owedCents));
             });
             dateText.setText("Date: " + LocalDate.now() + " (recorded automatically)");
         } else {
-            payeeSpinner.setAdapter(spinnerAdapter(new String[]{existing.payeeName}));
-            payeeSpinner.setEnabled(false);
+            paymentSpinner.setAdapter(spinnerAdapter(new String[]{existing.payerName + " paid " + existing.payeeName}));
+            paymentSpinner.setEnabled(false);
             amountInput.setText(Money.toInput(existing.amountCents));
             noteInput.setText(existing.note);
             dateText.setText("Date: " + existing.date);
@@ -445,10 +447,12 @@ public class HistoryActivity extends AppCompatActivity {
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             String amount = AuthActivity.text(amountInput);
             String note = AuthActivity.text(noteInput);
+            PairBalance pair = existing == null ? open.get(paymentSpinner.getSelectedItemPosition()) : null;
             UiAsync.run(this, () -> {
                 if (existing == null) {
-                    long payeeId = owed.get(payeeSpinner.getSelectedItemPosition()).otherUserId;
-                    return settlementService.recordSettlement(groupId, user, payeeId, amount, note);
+                    long payerId = pair.netCents < 0 ? user.userId : pair.otherUserId;
+                    long payeeId = pair.netCents < 0 ? pair.otherUserId : user.userId;
+                    return settlementService.recordSettlement(groupId, user, payerId, payeeId, amount, note);
                 }
                 return settlementService.updateSettlement(existing.id, user, amount, note);
             }, saved -> {

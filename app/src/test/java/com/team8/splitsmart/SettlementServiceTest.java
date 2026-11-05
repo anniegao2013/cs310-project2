@@ -64,33 +64,55 @@ public class SettlementServiceTest {
                 }
             });
 
-    private static User alice() {
+    private static User user(long id) {
         User user = new User();
-        user.userId = ALICE;
+        user.userId = id;
         return user;
+    }
+
+    private static User alice() {
+        return user(ALICE);
     }
 
     @Test
     public void settlementCanPayUpToWhatIsOwed() {
         aliceNetCents = -2500;
-        assertEquals(2500, service.recordSettlement(GROUP, alice(), BOB, "25.00", null).amountCents);
+        assertEquals(2500, service.recordSettlement(GROUP, alice(), ALICE, BOB, "25.00", null).amountCents);
     }
 
     @Test
     public void settlementCannotExceedWhatIsOwed() {
         aliceNetCents = -2500;
         assertThrows(ValidationException.class,
-                () -> service.recordSettlement(GROUP, alice(), BOB, "25.01", null));
+                () -> service.recordSettlement(GROUP, alice(), ALICE, BOB, "25.01", null));
     }
 
     @Test
     public void cannotSettleWhenNothingIsOwed() {
         aliceNetCents = 0;
         assertThrows(ValidationException.class,
-                () -> service.recordSettlement(GROUP, alice(), BOB, "1.00", null));
+                () -> service.recordSettlement(GROUP, alice(), ALICE, BOB, "1.00", null));
         aliceNetCents = 500; // Bob owes Alice
         assertThrows(ValidationException.class,
-                () -> service.recordSettlement(GROUP, alice(), BOB, "1.00", null));
+                () -> service.recordSettlement(GROUP, alice(), ALICE, BOB, "1.00", null));
+    }
+
+    @Test
+    public void recipientCanRecordAPaymentTheyReceived() {
+        aliceNetCents = -2500;
+        Settlement saved = service.recordSettlement(GROUP, user(BOB), ALICE, BOB, "5.00", null);
+        assertEquals(ALICE, saved.payerId);
+        assertEquals(BOB, saved.payeeId);
+        assertEquals(BOB, saved.createdBy);
+        assertThrows(ValidationException.class,
+                () -> service.recordSettlement(GROUP, user(BOB), ALICE, BOB, "25.01", null));
+    }
+
+    @Test
+    public void onlyThePayerOrRecipientCanRecord() {
+        aliceNetCents = -2500;
+        assertThrows(ValidationException.class,
+                () -> service.recordSettlement(GROUP, user(3), ALICE, BOB, "5.00", null));
     }
 
     @Test
