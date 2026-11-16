@@ -45,3 +45,48 @@ If the keys are missing, the app still builds but can't connect to Supabase.
 ```
 
 If you haven't opened the project in Android Studio, `local.properties` won't exist yet. Create it with your keys, then either add a `sdk.dir` line or set `ANDROID_HOME` to your SDK location. On a Mac the default location is `~/Library/Android/sdk`.
+
+## Running tests
+
+The project has two kinds of tests:
+
+| Kind | Folder | Runs on | Used for |
+|---|---|---|---|
+| JUnit unit tests | `app/src/test/` | Your computer's JVM | Logic classes like `SplitCalculator` and `AmountValidator` |
+| Espresso UI tests | `app/src/androidTest/` | An emulator or device | Screens and user interaction |
+
+The dependencies are already in `app/build.gradle`, so there's nothing to install. Gradle downloads them the first time you sync or build.
+
+### JUnit unit tests
+
+In Android Studio, right-click `app/src/test/java` and choose **Run 'Tests in ...'**. You can also click the green arrow next to any test class or method.
+
+From the terminal:
+
+```sh
+./gradlew testDebugUnitTest
+```
+
+The HTML report is written to `app/build/reports/tests/testDebugUnitTest/index.html`.
+
+If the terminal build fails with `Unsupported class file major version 69`, Gradle is running on Java 25, which this Gradle version doesn't support. Point `JAVA_HOME` at a JDK 17 or 21 install before running `./gradlew`. Android Studio doesn't have this problem because it uses its own Gradle JDK setting.
+
+### Espresso UI tests
+
+1. Start an emulator or connect a device with USB debugging on.
+2. Turn off animations on it, or Espresso tests can be flaky. In **Settings → Developer options**, set **Window animation scale**, **Transition animation scale** and **Animator duration scale** to **Off**.
+3. Right-click `app/src/androidTest/java` and choose **Run 'Tests in ...'**.
+
+From the terminal:
+
+```sh
+./gradlew connectedDebugAndroidTest
+```
+
+The HTML report is written to `app/build/reports/androidTests/connected/debug/index.html`.
+
+### Writing a new test
+
+- Logic that doesn't need Android classes goes in `app/src/test/java/com/team8/splitsmart/`. Annotate methods with `@Test` and use `org.junit.Assert`.
+- UI tests go in `app/src/androidTest/java/com/team8/splitsmart/`. Use `AuthActivityTest` as a template: annotate the class with `@RunWith(AndroidJUnit4.class)`, launch the screen with `ActivityScenarioRule`, then use `onView(withId(...)).perform(...)` and `.check(matches(...))`.
+- UI tests that log in or load data talk to the Supabase project in your `local.properties`, so use a test account rather than real data.
