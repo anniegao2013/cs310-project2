@@ -1,6 +1,6 @@
 # SplitSmart Testing
 
-This guide documents 15 black-box tests (5 registration tests and 10 workflow tests) and 15 white-box tests. The full JVM suite has 47 tests, all passing. The five added workflow tests passed against the configured Supabase project on a Pixel_4 emulator running Android 17. The previous ten black-box tests were verified on a Pixel_10 emulator running Android 17.
+This guide documents 20 black-box tests (5 registration tests and 15 workflow tests) and 20 white-box tests. The full JVM suite has 52 tests, all passing. Black-box tests BB-1 through BB-10 were verified on a Pixel_10 emulator running Android 17, BB-11 through BB-15 on a Pixel_4 emulator running Android 17, and BB-16 through BB-20 on a Pixel_4 emulator running Android 13. The workflow tests run against the configured Supabase project.
 
 **How to run them**
 
@@ -111,9 +111,48 @@ Changes a $10.00 equal-split expense to $14.00. History still shows a single tra
 
 Creates Food expenses named Dinner and Groceries and an Other expense named Dinner supplies. Searching for Dinner shows two rows. Selecting Food leaves just Dinner. Clearing the category filter restores both search matches.
 
+**Author of BB-16 through BB-20:** Angela Zhuang
+
+These five tests are in the same file, `WorkflowBlackBoxTest.java`. They target requirements none of BB-1 through BB-15 checked: uniqueness of accounts and memberships, the upper limits on settlement and expense amounts, and deleting an expense.
+
+### BB-16 `duplicateEmailRegistrationIsRejected`
+
+- **What it does:** registers an account and logs out, then fills the registration form again with a new name, a new USC ID and a valid password, but the same email as the first account. It taps **Create account** and checks that "An account with this email already exists" is shown and the user stays on the registration screen.
+- **Rationale:** BB-1 through BB-5 cover inputs that are invalid by themselves. This covers a different equivalence class: every field is valid, but the email is already in use. Changing only the email keeps the test pointing at a single rule, and the check guards the requirement that each USC student has one account.
+- **Result:** pass.
+- **Bugs found:** none.
+
+### BB-17 `addingExistingMemberAgainIsRejected`
+
+- **What it does:** creates a group, adds a second registered user, then opens **Members** and adds the same email again. It checks that "<name> is already in this group" is shown.
+- **Rationale:** BB-8 covers the email-has-no-account class. This test covers the remaining invalid class for an existing account: the person is already a member. Without this check, a duplicate member would appear twice and receive two shares of every equal split.
+- **Result:** pass.
+- **Bugs found:** none.
+
+### BB-18 `settlementAboveAmountOwedIsRejected`
+
+- **What it does:** saves a $10.00 expense split equally, so the partner owes $5.00. It opens **Record settlement**, changes the prefilled $5.00 to $5.01 and taps **Save**. It checks that "Amount cannot be more than the $5.00 owed" appears and the dialog stays open, cancels, and checks that history still has one transaction and the partner still owes $5.00.
+- **Rationale:** boundary value analysis on the settlement amount. BB-13 covers a value inside the valid range ($2.00), and the prefilled $5.00 is the upper bound. $5.01 is the smallest invalid value above it, the one an off-by-one check (`>=` instead of `>`) would get wrong. Checking history and balances afterwards confirms the rejected payment wasn't saved.
+- **Result:** pass.
+- **Bugs found:** none.
+
+### BB-19 `expenseAmountUpperBoundaryAndPrecisionAreEnforced`
+
+- **What it does:** on the add-expense form, it enters `1000000.01` and checks for "Amount cannot exceed $1,000,000.00" and a disabled **Save expense** button. It then enters `12.345` and checks for "Enter a valid dollar amount with at most two decimal places". Finally it enters `1000000.00` and checks that neither error is shown.
+- **Rationale:** BB-9 tests the lower boundary of the amount ($0). This tests the upper boundary from both sides: one cent over the maximum is invalid and the maximum itself is valid. `12.345` is the representative of a second invalid partition, amounts with more than two decimal places, which can't be stored as whole cents.
+- **Result:** pass.
+- **Bugs found:** none.
+
+### BB-20 `deletingExpenseClearsHistoryAndBalance`
+
+- **What it does:** saves a $10.00 equal-split expense, opens it from history, taps **Delete** and confirms in the "Delete expense?" dialog. It checks that history shows "No expenses or settlements yet." and that **Balances** shows the partner as "Settled up" with $0.00.
+- **Rationale:** deleting an expense is a core requirement no other black-box test covers. Like BB-14 for editing, it checks both what the user sees in the list and the derived balance, since a deleted expense that still counted towards balances would be a serious bug.
+- **Result:** pass.
+- **Bugs found:** none.
+
 ## White-box tests
 
-WB-1 through WB-12 are in `WhiteBoxTest.java`, WB-13 and WB-14 are in `SettlementServiceTest.java`, and WB-15 is in `DashboardTest.java`. All three files are under `app/src/test/java/com/team8/splitsmart/`.
+WB-1 through WB-12 are in `WhiteBoxTest.java`, WB-13 and WB-14 are in `SettlementServiceTest.java`, WB-15 is in `DashboardTest.java`, and WB-16 through WB-20 are in `CoverageGapWhiteBoxTest.java`. All four files are under `app/src/test/java/com/team8/splitsmart/`.
 
 **Author of WB-6 through WB-10:** Annie Gao
 
@@ -219,28 +258,81 @@ Covers the creator check shared by settlement updates and deletes. Both operatio
 
 Covers the null and whitespace-only early returns in `HistoryService.search`. Both results preserve item order, and clearing either result leaves the input list intact.
 
+**Author of WB-16 through WB-20:** Angela Zhuang
+
+**File:** `app/src/test/java/com/team8/splitsmart/CoverageGapWhiteBoxTest.java`
+
+We wrote these after the JaCoCo report for WB-1 through WB-15 still showed branches that no test took. Each test targets one of those gaps, and the before and after numbers are from running the report without and with this file.
+
+### WB-16 `recordSettlementRejectsPayingYourself`
+
+- **Code under test:** `SettlementService.recordSettlement` in `app/src/main/java/com/team8/splitsmart/settlement/SettlementService.java`
+- **What it does:** records a settlement where the payer and the payee are the same user and checks for "Choose another member". The fake repositories and balance service throw if they're called, so the test also proves the check runs before any membership lookup, debt lookup or save.
+- **Branches covered:** the true side of `payeeId == payerId`, the one branch of `recordSettlement` no other test took. The method goes from 9/10 to 10/10 branches.
+- **Result:** pass.
+- **Bugs found:** none.
+
+### WB-17 `searchMatchesUntitledExpenseOnlyThroughItsNote`
+
+- **Code under test:** `HistoryService.search` in `app/src/main/java/com/team8/splitsmart/dashboard/HistoryService.java`
+- **What it does:** searches a list containing an expense with a null title and a matching note, an expense with a null title and no note, a titled expense, and a settlement. Searching "Dinner" must return the untitled expense (through its note) and the titled one, in order, without throwing. Searching "Settlement" must return nothing, because a settlement's label isn't an expense title.
+- **Branches covered:** the false side of `item.title != null`, which no other test reached, plus the non-expense side of the type check. The method goes from 19/20 to 20/20 branches.
+- **Result:** pass.
+- **Bugs found:** none.
+
+### WB-18 `missingSettlementIsRejectedAndNotesAreNormalized`
+
+- **Code under test:** `SettlementService.getSettlement`, `updateSettlement`, `deleteSettlement` and `blankToNull`
+- **What it does:** makes the fake repository return no settlement, as if the other member had just deleted it. It checks that getting, updating and deleting all fail with "This settlement no longer exists" and make zero writes. It then records settlements with a null note, a spaces-only note and `"  paid in cash  "`, and checks they're saved as null, null and `"paid in cash"`.
+- **Branches covered:** the `settlement == null` branch of `getSettlement` (1/2 to 2/2) and every outcome of `text == null || text.trim().isEmpty()` in `blankToNull` (1/4 to 4/4).
+- **Result:** pass.
+- **Bugs found:** none.
+
+### WB-19 `verifyRejectsMalformedStoredHashes`
+
+- **Code under test:** `PasswordHasher.verify` in `app/src/main/java/com/team8/splitsmart/usergroup/PasswordHasher.java`
+- **What it does:** calls `verify` with a null password, a null stored hash, an empty string, a hash with 3 parts, a hash with 5 parts and a hash whose prefix is `sha256` instead of `pbkdf2`. All must return false without throwing. A well-formed hash of the right password must still return true.
+- **Branches covered:** both null checks and both sides of `parts.length != 4 || !parts[0].equals("pbkdf2")`. The method goes from 5/8 to 8/8 branches. These paths only run if the database holds a corrupted hash, so a user can't reach them through the app.
+- **Result:** pass.
+- **Bugs found:** none.
+
+### WB-20 `exactSplitAcceptsFormattedSharesUpToTheMaximum`
+
+- **Code under test:** `ExactAmountSplitStrategy.calculate` and `toCents` in `app/src/main/java/com/team8/splitsmart/split/ExactAmountSplitStrategy.java`
+- **What it does:** splits $1,001.00 into `"$1,000.50"` and `".5"` and checks the shares are 100050 and 50 cents. It then checks that shares of `"1000000.00"` and `"0"` are valid (exactly the maximum, and a zero share), that `"1000000.01"` is rejected with the "Enter a valid amount" message, and that a participant with no input is rejected.
+- **Branches covered:** the `$`/comma stripping and the `.5` form of the amount pattern, and both sides of the `> MAX_CENTS` check. `toCents` goes from 4/6 to 6/6 branches.
+- **Result:** pass.
+- **Bugs found:** none.
+
 ## Coverage
 
 The report measures branch outcomes in conditionals, including short-circuit expressions. Tests also exercise exception handlers. We picked branch coverage over statement coverage because the core logic is mostly validation rules and rounding decisions, where a statement can run while one side of its condition is never tested. Coverage is measured with JaCoCo, which is turned on for debug unit tests in `app/build.gradle`.
 
 **To generate the report:** `./gradlew createDebugUnitTestCoverageReport`, then open `app/build/reports/coverage/test/debug/index.html`.
 
-Measured with all 47 JVM tests.
+Measured with all 52 JVM tests.
 
 | Method | Branch coverage |
 |---|---|
 | `BalanceCalculator.computePairwise` | 16 / 16 (100%) |
 | `PercentageSplitStrategy.calculate` | 10 / 10 (100%) |
 | `PercentageSplitStrategy.toBasisPoints` | 6 / 6 (100%) |
+| `ExactAmountSplitStrategy.calculate` | 6 / 6 (100%) |
+| `ExactAmountSplitStrategy.toCents` | 6 / 6 (100%) |
 | `AuthService.register` | 18 / 18 (100%) |
 | `AuthService.login` | 4 / 4 (100%) |
 | `AuthService.updateName` | 6 / 6 (100%) |
 | `AuthService.normalizeEmail` | 2 / 2 (100%) |
+| `PasswordHasher.verify` | 8 / 8 (100%) |
 | `GroupService` (all methods) | 20 / 20 (100%) |
 | `ExpenseService` (all methods) | 36 / 36 (100%) |
-| `SettlementService.recordSettlement` | 9 / 10 (90%) |
+| `SettlementService.recordSettlement` | 10 / 10 (100%) |
+| `SettlementService.getSettlement` | 2 / 2 (100%) |
 | `SettlementService.requireCreator` | 2 / 2 (100%) |
-| `HistoryService.search` | 19 / 20 (95%) |
+| `SettlementService.blankToNull` | 4 / 4 (100%) |
+| `HistoryService.search` | 20 / 20 (100%) |
+
+Every method listed now reaches 100% branch coverage. Before WB-16 through WB-20 were added, `recordSettlement` was at 9/10, `search` at 19/20, `getSettlement` at 1/2, `blankToNull` at 1/4, `verify` at 5/8 and `toCents` at 4/6.
 
 ## Bugs found and changes made
 
