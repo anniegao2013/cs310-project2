@@ -1,5 +1,6 @@
 package com.team8.splitsmart;
 
+import static androidx.test.espresso.Espresso.onData;
 import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.Espresso.openActionBarOverflowOrOptionsMenu;
 import static androidx.test.espresso.Espresso.pressBack;
@@ -7,7 +8,10 @@ import static androidx.test.espresso.action.ViewActions.click;
 import static androidx.test.espresso.action.ViewActions.closeSoftKeyboard;
 import static androidx.test.espresso.action.ViewActions.replaceText;
 import static androidx.test.espresso.action.ViewActions.scrollTo;
+import static androidx.test.espresso.assertion.ViewAssertions.doesNotExist;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
+import static androidx.test.espresso.matcher.RootMatchers.isPlatformPopup;
+import static androidx.test.espresso.matcher.ViewMatchers.hasSibling;
 import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
 import static androidx.test.espresso.matcher.ViewMatchers.isEnabled;
 import static androidx.test.espresso.matcher.ViewMatchers.withEffectiveVisibility;
@@ -16,6 +20,7 @@ import static androidx.test.espresso.matcher.ViewMatchers.withText;
 
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.Matchers.hasToString;
 
 import android.os.SystemClock;
 import android.view.View;
@@ -37,8 +42,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Black-box system tests for the login, group-membership and expense workflows. Each test drives the
- * real screens and checks only what a user can see. The tests use a fresh account (and, for the
- * split test, a second account) so they never depend on data left by another test.
+ * real screens and checks only what a user can see. Each test registers fresh accounts so it
+ * can run independently.
  */
 @RunWith(AndroidJUnit4.class)
 public class WorkflowBlackBoxTest {
@@ -156,13 +161,53 @@ public class WorkflowBlackBoxTest {
         waitForView(allOf(withId(R.id.titleInput), isDisplayed()));
     }
 
-    private static void saveExpense(String title, String amount, Account partner) {
+    private static void enterExpense(String title, String amount, Account partner) {
         onView(withId(R.id.titleInput)).perform(scrollTo(), replaceText(title), closeSoftKeyboard());
         onView(withId(R.id.amountInput))
                 .perform(scrollTo(), replaceText(amount), closeSoftKeyboard());
         onView(allOf(withId(R.id.checkbox), withText(partner.name))).perform(scrollTo(), click());
+    }
+
+    private static void submitExpense(String title) {
         onView(withId(R.id.saveButton)).perform(scrollTo(), click());
         waitForView(allOf(withId(R.id.title), withText(title)));
+    }
+
+    private static void saveExpense(String title, String amount, Account partner) {
+        enterExpense(title, amount, partner);
+        submitExpense(title);
+    }
+
+    private static void createTwoMemberGroup(Account owner, Account partner) {
+        register(partner);
+        logOut();
+        register(owner);
+        createGroup("BB split " + owner.uscId);
+
+        openMembers();
+        addMember(partner.email);
+        waitForView(allOf(withId(R.id.secondary), withText(partner.email), isDisplayed()));
+        pressBack();
+        waitForView(allOf(withId(R.id.fab), withText("Add expense")));
+    }
+
+    private static void assertPartnerBalance(Account partner, String amount) {
+        openOverflowMenu();
+        onView(withText("Balances")).perform(click());
+        Matcher<View> partnerDebt = allOf(withId(R.id.secondary), withText(partner.name + " owes you"));
+        waitForView(partnerDebt);
+        onView(allOf(withId(R.id.trailing), withText(amount))).check(matches(isDisplayed()));
+    }
+
+    private static void enterShare(String participantLabel, String share) {
+        onView(allOf(withId(R.id.shareInput),
+                hasSibling(allOf(withId(R.id.checkbox), withText(participantLabel)))))
+                .perform(scrollTo(), replaceText(share), closeSoftKeyboard());
+    }
+
+    private static void selectCategory(String label) {
+        onView(withId(R.id.categorySpinner)).perform(scrollTo(), click());
+        onData(hasToString(label)).inRoot(isPlatformPopup()).perform(click());
     }
 
     // ----- BB-6 through BB-10 -----
@@ -233,29 +278,125 @@ public class WorkflowBlackBoxTest {
         Account owner = new Account("Payer");
         Account partner = new Account("Partner");
 
-        // Create both accounts through the real registration screen.
-        register(partner);
-        logOut();
-        register(owner);
-
-        String groupName = "BB split " + owner.uscId;
-        createGroup(groupName);
-
-        openMembers();
-        addMember(partner.email);
-        // Wait for the new row in the member list (not the still-open dialog's email field).
-        waitForView(allOf(withId(R.id.secondary), withText(partner.email), isDisplayed()));
-        pressBack();
-        waitForView(allOf(withId(R.id.fab), withText("Add expense")));
-
+        createTwoMemberGroup(owner, partner);
         openExpenseForm();
         saveExpense("Dinner", "10.00", partner);
 
         onView(allOf(withId(R.id.amount), withText("$10.00"))).check(matches(isDisplayed()));
+        assertPartnerBalance(partner, "$5.00");
+    }
+
+    @Test
+    public void exactSplitCanBeSavedAfterCorrectingShares() {
+        Account owner = new Account("Payer");
+        Account partner = new Account("Partner");
+        createTwoMemberGroup(owner, partner);
+        openExpenseForm();
+        enterExpense("Exact dinner", "10.00", partner);
+        onView(allOf(withId(R.id.exactButton), withText("Exact"))).perform(scrollTo(), click());
+        enterShare(owner.name + " · payer", "6.00");
+        enterShare(partner.name, "3.99");
+        onView(withId(R.id.saveButton)).check(matches(not(isEnabled())));
+
+        enterShare(partner.name, "4.00");
+        onView(withId(R.id.saveButton)).check(matches(isEnabled()));
+        submitExpense("Exact dinner");
+        assertPartnerBalance(partner, "$4.00");
+    }
+
+    @Test
+    public void percentageSplitAppearsInBalances() {
+        Account owner = new Account("Payer");
+        Account partner = new Account("Partner");
+        createTwoMemberGroup(owner, partner);
+        openExpenseForm();
+        enterExpense("Percentage dinner", "20.00", partner);
+        onView(allOf(withId(R.id.percentButton), withText("Percent"))).perform(scrollTo(), click());
+        enterShare(owner.name + " · payer", "75");
+        enterShare(partner.name, "25");
+
+        submitExpense("Percentage dinner");
+        onView(allOf(withId(R.id.amount), withText("$20.00"))).check(matches(isDisplayed()));
+        assertPartnerBalance(partner, "$5.00");
+    }
+
+    @Test
+    public void partialSettlementAppearsInHistoryAndReducesBalance() {
+        Account owner = new Account("Payer");
+        Account partner = new Account("Partner");
+        createTwoMemberGroup(owner, partner);
+        openExpenseForm();
+        saveExpense("Dinner", "10.00", partner);
+        assertPartnerBalance(partner, "$5.00");
+        pressBack();
+        waitForView(allOf(withId(R.id.title), withText("Dinner")));
 
         openOverflowMenu();
-        onView(withText("Balances")).perform(click());
-        waitForView(allOf(withId(R.id.secondary), withText(partner.name + " owes you")));
-        onView(allOf(withId(R.id.trailing), withText("$5.00"))).check(matches(isDisplayed()));
+        onView(withText("Record settlement")).perform(click());
+        waitForView(allOf(withId(R.id.amountInput), withText("5.00")));
+        onView(withId(R.id.amountInput)).perform(replaceText("2.00"), closeSoftKeyboard());
+        onView(withId(android.R.id.button1)).perform(click());
+
+        waitForView(allOf(withId(R.id.title), withText("Settlement")));
+        onView(allOf(withId(R.id.amount), withText("$2.00"))).check(matches(isDisplayed()));
+        assertPartnerBalance(partner, "$3.00");
+    }
+
+    @Test
+    public void editingExpenseUpdatesHistoryAndBalance() {
+        Account owner = new Account("Payer");
+        Account partner = new Account("Partner");
+        createTwoMemberGroup(owner, partner);
+        openExpenseForm();
+        saveExpense("Dinner", "10.00", partner);
+        assertPartnerBalance(partner, "$5.00");
+        pressBack();
+        waitForView(allOf(withId(R.id.title), withText("Dinner")));
+
+        onView(allOf(withId(R.id.title), withText("Dinner"))).perform(click());
+        onView(allOf(withId(android.R.id.button1), withText("Edit"))).perform(click());
+        waitForView(allOf(withId(R.id.amountInput), withText("10.00")));
+        onView(withId(R.id.amountInput)).perform(scrollTo(), replaceText("14.00"), closeSoftKeyboard());
+        onView(withId(R.id.saveButton)).perform(scrollTo(), click());
+
+        waitForView(allOf(withId(R.id.amount), withText("$14.00")));
+        onView(withId(R.id.historyLabel)).check(matches(withText("History · 1 transaction")));
+        onView(allOf(withId(R.id.title), withText("Dinner"))).check(matches(isDisplayed()));
+        assertPartnerBalance(partner, "$7.00");
+    }
+
+    @Test
+    public void historySearchAndCategoryFilterWorkTogether() {
+        Account owner = new Account("Payer");
+        Account partner = new Account("Partner");
+        createTwoMemberGroup(owner, partner);
+        openExpenseForm();
+        selectCategory("Food");
+        saveExpense("Groceries", "12.00", partner);
+        openExpenseForm();
+        selectCategory("Food");
+        saveExpense("Dinner", "10.00", partner);
+        openExpenseForm();
+        saveExpense("Dinner supplies", "4.00", partner);
+
+        Matcher<View> dinner = allOf(withId(R.id.title), withText("Dinner"));
+        Matcher<View> supplies = allOf(withId(R.id.title), withText("Dinner supplies"));
+        Matcher<View> groceries = allOf(withId(R.id.title), withText("Groceries"));
+        onView(withId(R.id.searchInput)).perform(replaceText("Dinner"), closeSoftKeyboard());
+        waitForView(allOf(withId(R.id.historyLabel), withText("History · showing 2 of 3")));
+        onView(dinner).check(matches(isDisplayed()));
+        onView(supplies).check(matches(isDisplayed()));
+        onView(groceries).check(doesNotExist());
+
+        selectCategory("Food");
+        waitForView(allOf(withId(R.id.historyLabel), withText("History · showing 1 of 3")));
+        onView(dinner).check(matches(isDisplayed()));
+        onView(supplies).check(doesNotExist());
+
+        selectCategory("All categories");
+        waitForView(allOf(withId(R.id.historyLabel), withText("History · showing 2 of 3")));
+        onView(dinner).check(matches(isDisplayed()));
+        onView(supplies).check(matches(isDisplayed()));
+        onView(groceries).check(doesNotExist());
     }
 }

@@ -3,6 +3,7 @@ package com.team8.splitsmart;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
@@ -49,6 +50,7 @@ public class WhiteBoxTest {
 
     /** In-memory stand-in for the Supabase-backed repository. */
     private static class FakeUserRepository extends UserRepository {
+        int registrationRepositoryCalls;
         boolean emailTaken;
         boolean uscIdTaken;
         boolean failSaveWithUniqueViolation;
@@ -64,16 +66,19 @@ public class WhiteBoxTest {
 
         @Override
         public boolean existsByEmail(String email) {
+            registrationRepositoryCalls++;
             return emailTaken;
         }
 
         @Override
         public boolean existsByUscId(String uscId) {
+            registrationRepositoryCalls++;
             return uscIdTaken;
         }
 
         @Override
         public User save(User user) {
+            registrationRepositoryCalls++;
             if (failSaveWithUniqueViolation) {
                 throw new DataException.UniqueViolation("duplicate key value violates unique constraint");
             }
@@ -601,5 +606,50 @@ public class WhiteBoxTest {
                         () -> service.deleteExpense(55, bob)).getMessage());
         service.deleteExpense(55, alice);
         assertEquals(55L, expenseRepo.deletedId);
+    }
+
+    /** Covers the null-input paths and verifies validation precedes repository access. */
+    @Test
+    public void registerRejectsMissingRequiredFieldsBeforeRepositoryLookup() {
+        FakeUserRepository repo = new FakeUserRepository();
+        AuthService service = auth(repo);
+        String name = "Alice";
+        String email = "alice@usc.edu";
+        String uscId = "1234567890";
+        String password = "fighton";
+
+        assertEquals("Enter your name", assertThrows(ValidationException.class,
+                () -> service.register(null, email, uscId, password)).getMessage());
+        assertEquals("Email must be a USC address ending in @usc.edu", assertThrows(ValidationException.class,
+                () -> service.register(name, null, uscId, password)).getMessage());
+        assertEquals("USC ID must be exactly 10 digits", assertThrows(ValidationException.class,
+                () -> service.register(name, email, null, password)).getMessage());
+        assertEquals("Password must be at least 6 characters", assertThrows(ValidationException.class,
+                () -> service.register(name, email, uscId, null)).getMessage());
+
+        assertEquals(0, repo.registrationRepositoryCalls);
+        assertNull(service.getCurrentUser());
+    }
+
+    /** Covers the null side of the short-circuit note check in applyDraft. */
+    @Test
+    public void createExpenseWithNullNoteSavesNull() {
+        User alice = user(ALICE, "Alice");
+        FakeGroupRepository groupRepo = new FakeGroupRepository();
+        groupRepo.members.add(alice);
+        groupRepo.members.add(user(BOB, "Bob"));
+        FakeExpenseRepository expenseRepo = new FakeExpenseRepository();
+        SplitCalculator calculator = new SplitCalculator();
+        ExpenseService service = new ExpenseService(expenseRepo, groupRepo, new AmountValidator(), calculator);
+        ExpenseDraft draft = draft(10, "Dinner", "10.00", Category.FOOD, ALICE, ALICE, BOB);
+        draft.note = null;
+        SplitResult split = calculator.preview(SplitMethod.EQUAL, 1000,
+                draft.participantIds, Collections.emptyMap());
+
+        Expense saved = service.createExpense(draft, split, alice);
+
+        assertNotNull(expenseRepo.stored);
+        assertSame(saved, expenseRepo.stored);
+        assertNull(expenseRepo.stored.note);
     }
 }

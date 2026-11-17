@@ -1,6 +1,7 @@
 package com.team8.splitsmart;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotSame;
 
 import com.team8.splitsmart.dashboard.HistoryService;
 import com.team8.splitsmart.dashboard.MonthlySummary;
@@ -21,6 +22,7 @@ import org.junit.Test;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -153,5 +155,20 @@ public class DashboardTest {
             sum += cents;
         }
         assertEquals(october.totalCents, sum);
+    }
+
+    /** Covers the null and trimmed-empty query paths in HistoryService.search. */
+    @Test
+    public void historySearchWithNullOrBlankQueryReturnsIndependentCopy() {
+        List<TransactionItem> original = items();
+        List<TransactionItem> expected = new ArrayList<>(original);
+
+        for (String query : Arrays.asList(null, "   ")) {
+            List<TransactionItem> result = history.search(original, query);
+            assertEquals(expected, result);
+            assertNotSame(original, result);
+            result.clear();
+            assertEquals(expected, original);
+        }
     }
 }
