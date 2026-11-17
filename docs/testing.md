@@ -1,13 +1,13 @@
 # SplitSmart Testing
 
-This document covers 10 black-box tests (5 registration tests and 5 workflow tests) and 10 white-box tests. All 20 pass: the black-box tests on the Pixel_10 emulator (Android 17) and the white-box tests on the JVM.
+This guide documents 15 black-box tests (5 registration tests and 10 workflow tests) and 15 white-box tests. The full JVM suite has 47 tests, all passing. The five added workflow tests passed against the configured Supabase project on a Pixel_4 emulator running Android 17. The previous ten black-box tests were verified on a Pixel_10 emulator running Android 17.
 
 **How to run them**
 
 | Tests | Run all | Run one |
 |---|---|---|
 | Black-box (Espresso, needs an emulator or device) | `./gradlew connectedDebugAndroidTest` | `./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.team8.splitsmart.RegistrationBlackBoxTest#<test name>`<br>`./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.team8.splitsmart.WorkflowBlackBoxTest#<test name>` |
-| White-box (JUnit) | `./gradlew testDebugUnitTest` | `./gradlew testDebugUnitTest --tests "com.team8.splitsmart.WhiteBoxTest.<test name>"` |
+| White-box (JUnit) | `./gradlew testDebugUnitTest` | `./gradlew testDebugUnitTest --tests "com.team8.splitsmart.<test class>.<test name>"` |
 
 In Android Studio you can also open the test file and click the green arrow next to a test or class.
 
@@ -57,7 +57,7 @@ These are system-level tests. Each one launches the real login screen, switches 
 
 **Run one workflow test:** `./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.team8.splitsmart.WorkflowBlackBoxTest#<test name>`
 
-**Requirements tested:** logging in, creating a group, adding a member, rejecting an invalid expense amount, and splitting an expense between two members.
+**Requirements tested:** logging in, creating a group, adding a member, rejecting an invalid expense amount, using each split method, recording a partial settlement, editing an expense, and combining history search with a category filter.
 
 These tests drive the real screens after registration. Unlike the registration tests, they create real accounts and data through the UI, so each test generates a unique 10-digit USC ID and matching `@usc.edu` address. Test data never depends on data left by another test.
 
@@ -91,9 +91,29 @@ These tests drive the real screens after registration. Unlike the registration t
 - **Rationale:** this is the core end-to-end workflow. The expected `$5.00` is computed from the equal-split rule, so the test checks both the saved expense and the derived balance.
 - **Bugs found:** none.
 
+### BB-11 `exactSplitCanBeSavedAfterCorrectingShares`
+
+Enters exact shares of $6.00 and $3.99 for a $10.00 expense and checks that Save is disabled. Changing the second share to $4.00 enables Save. After saving, the second participant owes $4.00. This tests recovery from a one-cent mismatch.
+
+### BB-12 `percentageSplitAppearsInBalances`
+
+Saves a $20.00 expense split 75% to the payer and 25% to the second participant. History shows the $20.00 expense and the second participant owes $5.00.
+
+### BB-13 `partialSettlementAppearsInHistoryAndReducesBalance`
+
+Records a $2.00 payment against a $5.00 debt. History shows the $2.00 settlement and the remaining balance is $3.00.
+
+### BB-14 `editingExpenseUpdatesHistoryAndBalance`
+
+Changes a $10.00 equal-split expense to $14.00. History still shows a single transaction with the updated amount, and the second participant's balance increases from $5.00 to $7.00.
+
+### BB-15 `historySearchAndCategoryFilterWorkTogether`
+
+Creates Food expenses named Dinner and Groceries and an Other expense named Dinner supplies. Searching for Dinner shows two rows. Selecting Food leaves just Dinner. Clearing the category filter restores both search matches.
+
 ## White-box tests
 
-**File:** `app/src/test/java/com/team8/splitsmart/WhiteBoxTest.java`
+WB-1 through WB-12 are in `WhiteBoxTest.java`, WB-13 and WB-14 are in `SettlementServiceTest.java`, and WB-15 is in `DashboardTest.java`. All three files are under `app/src/test/java/com/team8/splitsmart/`.
 
 **Author of WB-6 through WB-10:** Annie Gao
 
@@ -179,31 +199,52 @@ These are unit tests written by reading the source code. We first ran the existi
 - **Result:** pass.
 - **Bugs found:** none.
 
+### WB-11 `registerRejectsMissingRequiredFieldsBeforeRepositoryLookup`
+
+Covers the null-input paths in `AuthService.register`. Each call omits one required field and asserts its specific error, zero registration repository calls, and no active user.
+
+### WB-12 `createExpenseWithNullNoteSavesNull`
+
+Covers the null side of the note check in `ExpenseService.applyDraft`. A valid expense with an absent note reaches the fake repository with a null note.
+
+### WB-13 `recordSettlementRequiresBothUsersToBeGroupMembers`
+
+Exercises both operands of the group membership check in `SettlementService.recordSettlement`. A missing payer and a missing recipient each produce the membership error before debt lookup or save.
+
+### WB-14 `nonCreatorCannotUpdateOrDeleteSettlement`
+
+Covers the creator check shared by settlement updates and deletes. Both operations reject the other participant and make zero repository writes.
+
+### WB-15 `historySearchWithNullOrBlankQueryReturnsIndependentCopy`
+
+Covers the null and whitespace-only early returns in `HistoryService.search`. Both results preserve item order, and clearing either result leaves the input list intact.
+
 ## Coverage
 
-**Criterion:** branch coverage (every `if`, loop condition, ternary and `catch` taken both ways). We picked branch coverage over statement coverage because the core logic is mostly validation rules and rounding decisions, where a statement can run while one side of its condition is never tested. Coverage is measured with JaCoCo, which is turned on for debug unit tests in `app/build.gradle`.
+The report measures branch outcomes in conditionals, including short-circuit expressions. Tests also exercise exception handlers. We picked branch coverage over statement coverage because the core logic is mostly validation rules and rounding decisions, where a statement can run while one side of its condition is never tested. Coverage is measured with JaCoCo, which is turned on for debug unit tests in `app/build.gradle`.
 
-**To generate the report:** `./gradlew createDebugUnitTestCoverageReport`, then open `app/build/reports/coverage/test/debug/html/index.html`.
+**To generate the report:** `./gradlew createDebugUnitTestCoverageReport`, then open `app/build/reports/coverage/test/debug/index.html`.
 
-**Results with all unit tests** (the 10 white-box tests plus the other unit tests):
+Measured with all 47 JVM tests.
 
 | Method | Branch coverage |
 |---|---|
 | `BalanceCalculator.computePairwise` | 16 / 16 (100%) |
 | `PercentageSplitStrategy.calculate` | 10 / 10 (100%) |
 | `PercentageSplitStrategy.toBasisPoints` | 6 / 6 (100%) |
-| `AuthService.register` | 12 / 18 (67%) |
-| `AuthService.login` | 3 / 3 (100%) |
-| `AuthService.updateName` | 4 / 4 (100%) |
+| `AuthService.register` | 18 / 18 (100%) |
+| `AuthService.login` | 4 / 4 (100%) |
+| `AuthService.updateName` | 6 / 6 (100%) |
 | `AuthService.normalizeEmail` | 2 / 2 (100%) |
 | `GroupService` (all methods) | 20 / 20 (100%) |
-| `ExpenseService` (all methods) | 35 / 36 (97%) |
-
-The 6 branches still missed in `AuthService.register` are the `null` sides of the input-cleaning ternaries and the invalid-email, invalid-USC-ID and null-password rejections. The UI never passes `null` (it passes an empty string instead). The invalid-email and invalid-USC-ID rejections are covered at system level by BB-2, BB-3 and BB-4, but those run on the device, and JaCoCo here only measures the JVM unit tests. The one missed branch in `ExpenseService` is the `null` side of the note-cleaning ternary in `applyDraft`; the form always passes a string.
+| `ExpenseService` (all methods) | 36 / 36 (100%) |
+| `SettlementService.recordSettlement` | 9 / 10 (90%) |
+| `SettlementService.requireCreator` | 2 / 2 (100%) |
+| `HistoryService.search` | 19 / 20 (95%) |
 
 ## Bugs found and changes made
 
-None of the 20 tests (10 black-box and 10 white-box) found a defect in the app, so no app code was changed for them. These setup problems came up while getting the tests to run:
+The documented tests required no application code changes. The new exact and percentage split tests initially omitted “(you)” from the payer label in their Espresso matchers. Both passed after the matchers were corrected. The earlier test runs encountered these setup problems:
 
 | Problem | Change | Reason |
 |---|---|---|
