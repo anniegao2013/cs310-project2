@@ -399,4 +399,113 @@ public class WorkflowBlackBoxTest {
         onView(supplies).check(matches(isDisplayed()));
         onView(groceries).check(doesNotExist());
     }
+
+    // ----- BB-16 through BB-20 (author: Angela Zhuang) -----
+
+    /** BB-16: registering a second account with an email that is already taken is rejected. */
+    @Test
+    public void duplicateEmailRegistrationIsRejected() {
+        Account existing = new Account("Original");
+        register(existing);
+        logOut();
+
+        // Every field is valid on its own; only the email collides with the existing account.
+        Account other = new Account("Copycat");
+        onView(withId(R.id.registerTab)).perform(click());
+        onView(withId(R.id.nameInput)).perform(scrollTo(), replaceText(other.name));
+        onView(withId(R.id.emailInput)).perform(scrollTo(), replaceText(existing.email));
+        onView(withId(R.id.uscIdInput)).perform(scrollTo(), replaceText(other.uscId));
+        onView(withId(R.id.passwordInput))
+                .perform(scrollTo(), replaceText(PASSWORD), closeSoftKeyboard());
+        onView(withId(R.id.submitButton)).perform(scrollTo(), click());
+
+        waitForText("An account with this email already exists");
+        onView(withId(R.id.submitButton)).check(matches(isDisplayed()));
+    }
+
+    /** BB-17: adding someone who is already in the group shows an error instead of a duplicate. */
+    @Test
+    public void addingExistingMemberAgainIsRejected() {
+        Account owner = new Account("Owner");
+        Account partner = new Account("Partner");
+        createTwoMemberGroup(owner, partner);
+
+        openMembers();
+        addMember(partner.email);
+        waitForText(partner.name + " is already in this group");
+    }
+
+    /** BB-18: a settlement one cent above the debt is rejected and nothing is recorded. */
+    @Test
+    public void settlementAboveAmountOwedIsRejected() {
+        Account owner = new Account("Payer");
+        Account partner = new Account("Partner");
+        createTwoMemberGroup(owner, partner);
+        openExpenseForm();
+        saveExpense("Dinner", "10.00", partner);
+
+        openOverflowMenu();
+        onView(withText("Record settlement")).perform(click());
+        waitForView(allOf(withId(R.id.amountInput), withText("5.00")));
+        onView(withId(R.id.amountInput)).perform(replaceText("5.01"), closeSoftKeyboard());
+        onView(withId(android.R.id.button1)).perform(click());
+
+        waitForText("Amount cannot be more than the $5.00 owed");
+        onView(withId(R.id.amountInput)).check(matches(isDisplayed()));
+        onView(withId(android.R.id.button2)).perform(click());
+
+        waitForView(allOf(withId(R.id.historyLabel), withText("History · 1 transaction")));
+        onView(allOf(withId(R.id.title), withText("Settlement"))).check(doesNotExist());
+        assertPartnerBalance(partner, "$5.00");
+    }
+
+    /** BB-19: the upper amount boundary and the two-decimal rule on the expense form. */
+    @Test
+    public void expenseAmountUpperBoundaryAndPrecisionAreEnforced() {
+        Account account = new Account("Limit");
+        register(account);
+        createGroup("BB limit group " + account.uscId);
+        openExpenseForm();
+        onView(withId(R.id.titleInput))
+                .perform(scrollTo(), replaceText("Big purchase"), closeSoftKeyboard());
+
+        String tooLarge = "Amount cannot exceed $1,000,000.00";
+        onView(withId(R.id.amountInput))
+                .perform(scrollTo(), replaceText("1000000.01"), closeSoftKeyboard());
+        waitForText(tooLarge);
+        onView(withId(R.id.saveButton)).check(matches(not(isEnabled())));
+
+        String precision = "Enter a valid dollar amount with at most two decimal places";
+        onView(withId(R.id.amountInput))
+                .perform(scrollTo(), replaceText("12.345"), closeSoftKeyboard());
+        waitForText(precision);
+
+        onView(withId(R.id.amountInput))
+                .perform(scrollTo(), replaceText("1000000.00"), closeSoftKeyboard());
+        onView(withText(tooLarge)).check(doesNotExist());
+        onView(withText(precision)).check(doesNotExist());
+    }
+
+    /** BB-20: deleting an expense removes it from history and returns the balance to zero. */
+    @Test
+    public void deletingExpenseClearsHistoryAndBalance() {
+        Account owner = new Account("Payer");
+        Account partner = new Account("Partner");
+        createTwoMemberGroup(owner, partner);
+        openExpenseForm();
+        saveExpense("Dinner", "10.00", partner);
+
+        onView(allOf(withId(R.id.title), withText("Dinner"))).perform(click());
+        onView(allOf(withId(android.R.id.button3), withText("Delete"))).perform(click());
+        waitForText("Delete expense?");
+        onView(allOf(withId(android.R.id.button1), withText("Delete"))).perform(click());
+
+        waitForText("No expenses or settlements yet.");
+        onView(allOf(withId(R.id.title), withText("Dinner"))).check(doesNotExist());
+
+        openOverflowMenu();
+        onView(withText("Balances")).perform(click());
+        waitForView(allOf(withId(R.id.secondary), withText("Settled up")));
+        onView(allOf(withId(R.id.trailing), withText("$0.00"))).check(matches(isDisplayed()));
+    }
 }
