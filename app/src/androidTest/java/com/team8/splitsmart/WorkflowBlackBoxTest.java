@@ -294,7 +294,7 @@ public class WorkflowBlackBoxTest {
         openExpenseForm();
         enterExpense("Exact dinner", "10.00", partner);
         onView(allOf(withId(R.id.exactButton), withText("Exact"))).perform(scrollTo(), click());
-        enterShare(owner.name + " · payer", "6.00");
+        enterShare(owner.name + " (you) · payer", "6.00");
         enterShare(partner.name, "3.99");
         onView(withId(R.id.saveButton)).check(matches(not(isEnabled())));
 
@@ -312,7 +312,7 @@ public class WorkflowBlackBoxTest {
         openExpenseForm();
         enterExpense("Percentage dinner", "20.00", partner);
         onView(allOf(withId(R.id.percentButton), withText("Percent"))).perform(scrollTo(), click());
-        enterShare(owner.name + " · payer", "75");
+        enterShare(owner.name + " (you) · payer", "75");
         enterShare(partner.name, "25");
 
         submitExpense("Percentage dinner");
