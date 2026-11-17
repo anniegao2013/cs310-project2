@@ -25,6 +25,9 @@ public class SettlementServiceTest {
     /** Alice's net balance with Bob; negative means Alice owes Bob. */
     private int aliceNetCents;
 
+    private int settlementUpdates;
+    private int settlementDeletes;
+
     private final SettlementService service = new SettlementService(
             new SettlementRepository(null) {
                 @Override
@@ -34,7 +37,13 @@ public class SettlementServiceTest {
 
                 @Override
                 public Settlement update(Settlement settlement) {
+                    settlementUpdates++;
                     return settlement;
+                }
+
+                @Override
+                public void delete(long settlementId) {
+                    settlementDeletes++;
                 }
 
                 @Override
@@ -63,6 +72,46 @@ public class SettlementServiceTest {
                             Arrays.asList(new PairBalance(BOB, "Bob", aliceNetCents)));
                 }
             });
+
+    /** Covers both sides of the membership check before any debt lookup or write. */
+    @Test
+    public void recordSettlementRequiresBothUsersToBeGroupMembers() {
+        for (long nonMember : new long[]{ALICE, BOB}) {
+            SettlementService service = new SettlementService(new SettlementRepository(null) {
+                @Override
+                public Settlement save(Settlement settlement) {
+                    throw new AssertionError("Invalid settlement reached save");
+                }
+            }, new GroupRepository(null) {
+                @Override
+                public boolean isMember(long groupId, long userId) {
+                    return userId != nonMember;
+                }
+            }, new AmountValidator(), new BalanceService(null, null, null, null) {
+                @Override
+                public BalanceSummary getBalances(long groupId, long userId) {
+                    throw new AssertionError("Invalid settlement reached debt lookup");
+                }
+            });
+
+            assertEquals("Both users must be members of the group", assertThrows(ValidationException.class,
+                    () -> service.recordSettlement(GROUP, alice(), ALICE, BOB, "5.00", null)).getMessage());
+        }
+    }
+
+    /** Covers the creator check shared by updateSettlement and deleteSettlement. */
+    @Test
+    public void nonCreatorCannotUpdateOrDeleteSettlement() {
+        User recipient = user(BOB);
+        String message = "Only the person who recorded this settlement can change it";
+
+        assertEquals(message, assertThrows(ValidationException.class,
+                () -> service.updateSettlement(5, recipient, "5.00", null)).getMessage());
+        assertEquals(message, assertThrows(ValidationException.class,
+                () -> service.deleteSettlement(5, recipient)).getMessage());
+        assertEquals(0, settlementUpdates);
+        assertEquals(0, settlementDeletes);
+    }
 
     private static User user(long id) {
         User user = new User();
